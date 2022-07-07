@@ -14,10 +14,13 @@ builder.Services.AddMemoryCache();
 builder.Services.AddTransient<ICacheProvider, MemoryCacheProvider>();
 
 builder.Services.AddTransient<ITestService, TestService>();
+builder.Services.AddSingleton<ISingletonService, SingletonService>();
 builder.Services.ConfigureDynamicProxy(
     config =>
     {
-        config.Interceptors.AddTyped<AopAttribute>(Predicates.ForService(nameof(ITestService)));
+        config.Interceptors.AddTyped<AopAttribute>(
+            Predicates.ForService(nameof(ITestService)),
+            Predicates.ForService(nameof(ISingletonService)));
     });
 
 var app = builder.Build();

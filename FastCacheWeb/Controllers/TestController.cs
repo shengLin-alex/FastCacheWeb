@@ -10,16 +10,26 @@ namespace FastCacheWeb.Controllers;
 public class TestController : ControllerBase
 {
     private readonly ITestService _testService;
+    private readonly ISingletonService _singletonService;
 
-    public TestController(ITestService testService)
+    public TestController(ITestService testService, ISingletonService singletonService)
     {
         _testService = testService;
+        _singletonService = singletonService;
     }
 
     [HttpGet("Test")]
     public async Task<int> Test()
     {
         return await _testService.Get();
+    }
+    
+    [HttpGet("Test2")]
+    public async Task<int> Test2()
+    {
+        var i = await _singletonService.Get();
+        Console.WriteLine(i);
+        return i;
     }
 }
 
@@ -36,6 +46,22 @@ public class TestService : ITestService
         await Task.Delay(TimeSpan.FromMilliseconds(10));
 
         return 1;
+    }
+}
+
+public interface ISingletonService
+{
+    [Aop(Duration = 100)]
+    Task<int> Get();
+}
+
+public class SingletonService : ISingletonService
+{
+    public async Task<int> Get()
+    {
+        await Task.Delay(TimeSpan.FromMilliseconds(10));
+
+        return GetHashCode();
     }
 }
 
