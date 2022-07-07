@@ -25,7 +25,7 @@ public class TestController : ControllerBase
 
 public interface ITestService
 {
-    [Aop(Duration = 10000)]
+    [Aop(Duration = 100)]
     Task<int> Get();
 }
 
