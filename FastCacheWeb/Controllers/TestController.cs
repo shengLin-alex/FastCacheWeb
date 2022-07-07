@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using AspectCore.DynamicProxy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -40,7 +41,7 @@ public class TestService : ITestService
 
 public class AopAttribute : AbstractInterceptorAttribute
 {
-    private static readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new();
 
     public int Duration { get; set; }
     public bool Forever { get; set; } = false;
@@ -63,11 +64,12 @@ public class AopAttribute : AbstractInterceptorAttribute
             return;
         }
 
+        var semaphoreSlim = Locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         var customAttribute = GetCustomAttribute(context.ProxyMethod, typeof(AopAttribute)) as AopAttribute;
 
         try
         {
-            await SemaphoreSlim.WaitAsync();
+            await semaphoreSlim.WaitAsync();
 
             await next(context);
 
@@ -106,7 +108,7 @@ public class AopAttribute : AbstractInterceptorAttribute
         }
         finally
         {
-            SemaphoreSlim.Release();
+            semaphoreSlim.Release();
         }
     }
 
