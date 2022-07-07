@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using AspectCore.DynamicProxy;
+using FastCacheWeb.Providers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace FastCacheWeb.Controllers;
 
@@ -25,7 +25,7 @@ public class TestController : ControllerBase
 
 public interface ITestService
 {
-    [Aop(Duration = 100)]
+    [Aop(Duration = 10000)]
     Task<int> Get();
 }
 
@@ -48,12 +48,12 @@ public class AopAttribute : AbstractInterceptorAttribute
 
     public override async Task Invoke(AspectContext context, AspectDelegate next)
     {
-        var memoryCache = context.ServiceProvider.GetRequiredService<IMemoryCache>();
-
+        var cacheProvider = context.ServiceProvider.GetRequiredService<ICacheProvider>();
         var key = GetKey(context);
 
-        if (memoryCache.TryGetValue(key, out var result))
+        if (cacheProvider.Contains(key))
         {
+            var result = cacheProvider.Get(key);
             if (result is Exception ex)
             {
                 throw ex;
@@ -73,37 +73,11 @@ public class AopAttribute : AbstractInterceptorAttribute
 
             await next(context);
 
-            if (customAttribute!.Forever)
-            {
-                memoryCache.Set(key, context.ReturnValue);
-                return;
-            }
-
-            if (customAttribute.Duration <= 0)
-            {
-                throw new ArgumentException(
-                    "Duration cannot be less or equal to zero",
-                    nameof(customAttribute.Duration));
-            }
-
-            memoryCache.Set(key, context.ReturnValue, TimeSpan.FromMilliseconds(customAttribute.Duration));
+            cacheProvider.Put(key, context.ReturnValue, customAttribute!.Duration, customAttribute.Forever);
         }
         catch (Exception e)
         {
-            if (customAttribute!.Forever)
-            {
-                memoryCache.Set(key, e);
-                return;
-            }
-
-            if (customAttribute.Duration <= 0)
-            {
-                throw new ArgumentException(
-                    "Duration cannot be less or equal to zero",
-                    nameof(customAttribute.Duration));
-            }
-
-            memoryCache.Set(key, e, TimeSpan.FromMilliseconds(customAttribute.Duration));
+            cacheProvider.Put(key, e, customAttribute!.Duration, customAttribute.Forever);
             throw;
         }
         finally
