@@ -9,8 +9,8 @@ namespace FastCacheWeb.Controllers;
 [Route("[controller]")]
 public class TestController : ControllerBase
 {
-    private readonly ITestService _testService;
     private readonly ISingletonService _singletonService;
+    private readonly ITestService _testService;
 
     public TestController(ITestService testService, ISingletonService singletonService)
     {
@@ -21,9 +21,9 @@ public class TestController : ControllerBase
     [HttpGet("Test")]
     public async Task<int> Test()
     {
-        return await _testService.Get();
+        return await _testService.Get(19, 190);
     }
-    
+
     [HttpGet("Test2")]
     public async Task<int> Test2()
     {
@@ -37,6 +37,9 @@ public interface ITestService
 {
     [Aop(Duration = 100)]
     Task<int> Get();
+
+    [Aop(Duration = 100)]
+    Task<int> Get(int a, int b);
 }
 
 public class TestService : ITestService
@@ -46,6 +49,13 @@ public class TestService : ITestService
         await Task.Delay(TimeSpan.FromMilliseconds(10));
 
         return 1;
+    }
+
+    public async Task<int> Get(int a, int b)
+    {
+        await Task.Delay(TimeSpan.FromMilliseconds(10));
+
+        return a + b + GetHashCode();
     }
 }
 
